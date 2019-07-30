@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- 页面meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>传智健康</title>
+    <meta name="description" content="传智健康">
+    <meta name="keywords" content="传智健康">
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="plugins/elementui/index.css">
+    <link rel="stylesheet" href="plugins/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="hold-transition skin-purple sidebar-mini">
+<div id="app">
+    <div class="login-container">
+        <div class="loginBox">
+            <form method="post" class="login-form" action="/login.do" label-position="left">
+                <div class="title-container">
+                    <div class="logoInfo clearfix">
+                        <em class="logo"></em>
+                    </div>
+                </div>
+                <div>
+                        <span class="svg-container svg-container_login">
+                          <span class="user"></span>
+                        </span>
+                    <input type="text" name="username" placeholder="请输入用户名"/>
+                </div>
+                <div>
+                        <span class="svg-container">
+                          <span class="username"></span>
+                        </span>
+                    <input type="password" name="password" placeholder="请输入密码"/>
+                    <el-button size="small" @click="handleEdit()">忘记密码</el-button>
+                </div>
+                <input type="submit" style="width:100%;margin-bottom:30px;" value="登录"></input>
+            </form>
+        </div>
+    </div>
+    <!-- 新增标签弹层 -->
+    <div class="form1">
+        <el-dialog title="更改密码" :visible.sync="dialogFormVisible">
+            <div class="input-row">
+                <label>手机号</label>
+                <input v-model="telephone" type="text" class="input-clear" placeholder="请输入手机号">
+                <input style="font-size: x-small;" id="validateCodeButton" @click="sendValidateCode()" type="button"
+                       value="发送验证码">
+            </div>
+            <div class="input-row">
+                <label>验证码</label>
+                <input v-model="validateCode" type="text" class="input-clear" placeholder="请输入验证码">
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible = false">取消</el-button>
+                <el-button type="primary" @click="handleValid()">确定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+    <!-- 新增标签弹层 -->
+    <div class="form2">
+        <el-dialog title="更改密码" :visible.sync="dialogFormVisible2">
+            <div class="input-row">
+                <label>新密码</label>
+                <input v-model="password1" type="password" class="input-clear" placeholder="请输入新密码">
+            </div>
+            <div class="input-row">
+                <label>重复密码</label>
+                <input v-model="password2" type="password" class="input-clear" placeholder="请再次输入新密码">
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible2 = false">取消</el-button>
+                <el-button type="primary" @click="changePassword()">确定</el-button>
+            </div>
+        </el-dialog>
+    </div>
+</div>
+</body>
+<!-- 引入组件库 -->
+<script src="js/vue.js"></script>
+<script src="plugins/elementui/index.js"></script>
+<script type="text/javascript" src="js/jquery.min.js"></script>
+<script src="js/axios-0.18.0.js"></script>
+<script>
+    var vue = new Vue({
+        el: '#app',
+        data: {
+            dialogFormVisible: false,//增加表单是否可见
+            dialogFormVisible2: false,
+            telephone: null,
+            validateCode: null,
+            nums: 30,
+            password1: null,
+            password2: null
+        },
+        methods: {
+            handleEdit() {
+                this.dialogFormVisible = true;
+            },
+            sendValidateCode() {
+                //获取用户输入的手机号
+                var telephone = this.telephone;
+                //校验手机号输入是否正确
+                if (!this.checkTelephone(telephone)) {
+                    this.$message.error('请输入正确的手机号');
+                    return false;
+                }
+                validateCodeButton = $("#validateCodeButton")[0];
+                clock = window.setInterval(this.doLoop, 1000); //一秒执行一次
+                axios.get("/validateCode/webChangePasswordSend6Order.do?telephone=" + telephone).then((response) => {
+                    if (!response.data.flag) {
+                        //验证码发送失败
+                        this.$message.error('验证码发送失败，请检查手机号输入是否正确');
+                    }
+                });
+            },
+            checkTelephone(telephone) {
+                var reg = /^[1][3,4,5,7,8][0-9]{9}$/;
+                if (!reg.test(telephone)) {
+                    return false;
+                } else {
+                    return true;
+                }
+            },
+            doLoop() {
+                var nums = this.nums;
+                validateCodeButton.disabled = true;//将按钮置为不可点击
+                nums--;
+                if (nums > 0) {
+                    validateCodeButton.value = nums + '秒后重新获取';
+                    this.nums = nums;
+                } else {
+                    clearInterval(clock); //清除js定时器
+                    validateCodeButton.disabled = false;
+                    validateCodeButton.value = '重新获取验证码';
+                    this.nums = 30; //重置时间
+                }
+            },
+            handleValid() {
+                var validateCode = this.validateCode;
+                var telephone = this.telephone;
+
+                axios.get("/validateCode/checkoutValid.do?telephone=" + telephone + "&validateCode=" + validateCode)
+                    .then((response) => {
+                        if (!response.data.flag) {
+                            //验证码发送失败
+                            this.$message.error('验证码错误');
+                        } else {
+                            this.dialogFormVisible = false;
+                            this.dialogFormVisible2 = true;
+                        }
+                    });
+            },
+            changePassword() {
+                var password1 = this.password1;
+                var password2 = this.password2;
+                if (password1 === password2) {
+                    axios.get("/user/changePassword.do?telephone=" + this.telephone + "&password=" + password1)
+                        .then((response) => {
+                            if (!response.data.flag) {
+                                //验证码发送失败
+                                this.$message.error('更改密码失败');
+                            } else {
+                                this.dialogFormVisible2 = false;
+                                this.$message.success('更改密码成功');
+                            }
+                        });
+                } else {
+                    this.$message.error('密码不一致,请重新输入');
+                }
+            }
+        }
+    });
+</script>
+</html>
